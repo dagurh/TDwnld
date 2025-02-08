@@ -1,3 +1,5 @@
+from re import S
+from xml.etree.ElementTree import tostring
 import requests
 import pandas as pd
 from datetime import datetime
@@ -74,63 +76,53 @@ def get_latest():
     noOfRows = len(latest_episodes_df)
 
     for i in range(noOfRows):
-        print(f"{latest_episodes_df.iloc[i,0]}: Size={latest_episodes_df.iloc[i,4]}MB, Title:  {latest_episodes_df.iloc[i,1]}")
+        print(f"{i}: Size={latest_episodes_df.iloc[i,4]}MB, Title:  {latest_episodes_df.iloc[i,1]}")
         
     index = 0
 
     while True:
         try:
             index = int(input("select file to download (index number)"))
-            if 1 <= index <= noOfRows:
+            if 0 <= index < noOfRows:
                 break
             else:
-                print(f"File does not exist, enter a number between 1 and {noOfRows}.")
+                print(f"File does not exist, enter a number between 0 and {noOfRows - 1}.")
         except ValueError:
             print("Invalid input. please enter a number")
 
-    webbrowser.open(df.iloc[index-1, 6])
+    print(latest_episodes_df.iloc[index, 1])
+    webbrowser.open(latest_episodes_df.iloc[index, 6])
 
 
 def get_ep_seas(y, x):
 
-    indexes = []
-    indexes_old = []
-    temp_sizes = []
-    temp_sizes_old = []
+    s = str(y)
+    e = str(x)
 
-    new_sizes = []
+    chosen_season_df = df[df["Season"] == s]
+    print(chosen_season_df)
+    chosen_episode_df = chosen_season_df[chosen_season_df["Episode"] == e]
+    chosen_episode_df = chosen_episode_df.reset_index(drop=True)
 
-    for index, season in enumerate(seasons):
-        if int(season) == y:
-            indexes_old.append(index)
-            temp_sizes_old.append(sizes[index])
+    noOfRows = len(chosen_episode_df)
 
-    episodes_new = []
-    for i, j in zip(indexes_old, episodes):
-        episodes_new.append(episodes[i])
+    for i in range(noOfRows):
+        print(f"{i}: Size={chosen_episode_df.iloc[i,4]}MB, Title:  {chosen_episode_df.iloc[i,1]}")
+        
+    index = 0
 
-    for index, ep in zip(indexes_old, episodes_new):
-        if int(ep) == x:
-            indexes.append(index)
-            temp_sizes.append(sizes[index])
+    while True:
+        try:
+            index = int(input("select file to download (index number)"))
+            if 0 <= index < noOfRows:
+                break
+            else:
+                print(f"File does not exist, enter a number between 0 and {noOfRows - 1}.")
+        except ValueError:
+            print("Invalid input. please enter a number")
 
-    for s in temp_sizes:
-        if "M" in s:
-            y = s.replace(" MB", "")
-            new_sizes.append(float(y))
-        if "G" in s:
-            y = s.replace(" GB", "")
-            new_sizes.append(float(y)*1000)
-
-    maxim = max(new_sizes)
-
-    if maxim > 1000:
-        maxim = str((float(maxim)/1000))+" GB"
-    else:
-        maxim = str(maxim) + " MB"
-
-    chosen = sizes.index(maxim)
-    #webbrowser.open(df.iloc[chosen, 6])
+    print(chosen_episode_df.iloc[index, 1])
+    webbrowser.open(chosen_episode_df.iloc[index, 6])
 
 
 def download():
