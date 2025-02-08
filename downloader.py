@@ -1,9 +1,9 @@
-from re import S
-from xml.etree.ElementTree import tostring
 import requests
 import pandas as pd
 from datetime import datetime
 import webbrowser
+import math
+import re
 
 
 def convert_size(bytes):
@@ -35,6 +35,21 @@ response_json = requests.get("https://EZTVx.to/api/get-torrents",
                              params={"page": selected_page, 
                                      "limit": 100, 
                                      "imdb_id": imdb}).json()
+
+totalTorrents = response_json["torrents_count"]
+totalPages = math.ceil(totalTorrents / 100)
+print(f"Total torrents: {totalTorrents}, Total pages: {totalPages}")
+
+if (totalPages > 1):
+    i = 2
+    while i <= totalPages:
+        responseAdditional_json = requests.get("https://EZTVx.to/api/get-torrents",
+                             headers={"Accept": "application/json"},
+                             params={"page": i, 
+                                     "limit": 100, 
+                                     "imdb_id": imdb}).json()
+        response_json["torrents"] = response_json["torrents"] + responseAdditional_json["torrents"]
+        i += 1
 
 size = len(response_json["torrents"])
 
@@ -90,7 +105,6 @@ def get_latest():
         except ValueError:
             print("Invalid input. please enter a number")
 
-    print(latest_episodes_df.iloc[index, 1])
     webbrowser.open(latest_episodes_df.iloc[index, 6])
 
 
@@ -100,7 +114,6 @@ def get_ep_seas(y, x):
     e = str(x)
 
     chosen_season_df = df[df["Season"] == s]
-    print(chosen_season_df)
     chosen_episode_df = chosen_season_df[chosen_season_df["Episode"] == e]
     chosen_episode_df = chosen_episode_df.reset_index(drop=True)
 
@@ -113,38 +126,46 @@ def get_ep_seas(y, x):
 
     while True:
         try:
-            index = int(input("select file to download (index number)"))
+            index = int(input("select file to download (index number): "))
             if 0 <= index < noOfRows:
                 break
             else:
                 print(f"File does not exist, enter a number between 0 and {noOfRows - 1}.")
         except ValueError:
-            print("Invalid input. please enter a number")
+            print("Invalid input. please enter a number: ")
 
-    print(chosen_episode_df.iloc[index, 1])
     webbrowser.open(chosen_episode_df.iloc[index, 6])
 
+def listAll():
+    print("Available Episodes")
+    df_filtered = df[["Season","Episode"]]
+    print(df_filtered)
+    df_cleaned = df.drop_duplicates(subset=["Season","Episode"], keep="first")
+    df_final = df_cleaned[["Season","Episode"]]
+    df_final.sort_values(by=["Season", "Episode"], ascending=[False, False], inplace=True)
+    print(df_final)
 
 def download():
-    x = ""
-    y = ""
+    user_input = ""
 
-    while "stop" not in x or "stop" not in y:
-        y = input("Which Season? ")
-        x = input("Which Episode should I download? ")
+    while "stop" not in user_input:
+        user_input = input("(s,e), latest, list or stop: ")
 
         try:
 
             # new or latest for latest episode
 
-            if "new" in x or "latest" in x:
+            if "latest" in user_input:
                 get_latest()
-            elif "new" in x or "latest" in y:
-                get_latest()
+            elif "list" in user_input:
+                listAll()
+            elif re.match(r"^[1-99]\d+,[1-99]\d+$", user_input):
+                season, episode = user_input.split(",")
+                get_ep_seas(int(season), int(episode))
             else:
-                get_ep_seas(int(y), int(x))
+                print("Please input in correct format\nLastest: See latest episodes\nList: List all available episodes\nSeason,Episode: List certain episode fx. 1,15")
         except:
-            print("An error has occured")
+            print("An unexpected error has occured")
 
 
 download()
