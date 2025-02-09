@@ -138,10 +138,10 @@ def get_ep_seas(y, x):
 
 def listAll():
     print("Available Episodes")
-    df_filtered = df[["Season","Episode"]]
+    df_filtered = df[["Season","Episode","Titles"]]
     print(df_filtered)
     df_cleaned = df.drop_duplicates(subset=["Season","Episode"], keep="first")
-    df_final = df_cleaned[["Season","Episode"]]
+    df_final = df_cleaned[["Season","Episode","Titles"]]
     df_final.sort_values(by=["Season", "Episode"], ascending=[False, False], inplace=True)
     print(df_final)
 
