@@ -5,7 +5,7 @@ import webbrowser
 import math
 import re
 
-
+# Converts size to a more readable format
 def convert_size(bytes):
     bytes = int(bytes)
     if bytes > 1*10**9:
@@ -15,9 +15,10 @@ def convert_size(bytes):
         num = bytes*0.00000095367432
         return f"{round(num,2)} MB"
 
-
+# Initialize response_json
 response_json = None
 
+# Retrieve IMDB ID to use for torrent search
 def getIMDBID(search, key):
     try:
         response = requests.get(
@@ -32,7 +33,7 @@ def getIMDBID(search, key):
         # Parse JSON response
         data = response.json()
         
-        # Handle API-specific errors (e.g., movie not found, invalid API key)
+        # Handle API-specific errors (e.g., serie/movie not found, invalid API key)
         if "imdbID" in data:
             return data["imdbID"]
         elif "Error" in data:
@@ -47,24 +48,29 @@ def getIMDBID(search, key):
         print(f"Data error: {ve}")
         return None    
 
-
-def getTorrents(selected_page, imdb):
+# Retrieve all torrents with selected title
+def getTorrents(imdb):
     try:
         response = requests.get(
             "https://EZTVx.to/api/get-torrents",
             headers={"Accept": "application/json"},
-            params={"page": selected_page, "limit": 100, "imdb_id": imdb}
+            params={"page": 1, "limit": 100, "imdb_id": imdb}
         )
 
+        # Check if the request was successful
         response.raise_for_status()
 
+        # Parse JSON response
         data = response.json()
 
+        # Handle API-specific errors (e.g., serie not found, invalid API key)
         if data["torrents_count"] != 0:
             totalTorrents = data["torrents_count"]
             totalPages = math.ceil(totalTorrents / 100)
             print(f"Total torrents found: {totalTorrents}")
 
+            # If the response has over 100 torrents we iterate 
+            # through pages to retrieve all available torrents
             if (totalPages > 1):
                 i = 2
                 while i <= totalPages:
@@ -91,11 +97,10 @@ def getTorrents(selected_page, imdb):
         print(f"Data error: {ve}")
         return None 
         
-
+# While response_json is empty we keep asking for serie title
 while response_json == None:
 
     search = input("What show should I check? ")
-    selected_page = 1
 
     with open("API_key.txt") as file:
         key = file.read()
@@ -106,7 +111,7 @@ while response_json == None:
         imdb = imdb_full[2:]
         print(f"IMDB-ID: {imdb}")
 
-        response_json = getTorrents(selected_page, imdb)
+        response_json = getTorrents(imdb)
 
 
 size = len(response_json["torrents"])
@@ -120,6 +125,7 @@ sizes = []
 
 numbers = [i for i in range(1, size+1)]
 
+# Populate the arrays from response_json
 for item in response_json["torrents"]:
     titles.append(item["title"])
     seasons.append(int(item["season"]))
@@ -137,6 +143,7 @@ df.set_index("Number")
 
 def get_latest():
 
+    # Create a new dataframe with latest season, episode listed
     max_season = df["Season"].max()
     max_season_df = df[df["Season"] == max_season]
 
@@ -148,11 +155,13 @@ def get_latest():
 
     noOfRows = len(latest_episodes_df)
 
+    # Lists all available torrents of the latest episode
     for i in range(noOfRows):
         print(f"{i}: Size={latest_episodes_df.iloc[i,4]}MB, Title:  {latest_episodes_df.iloc[i,1]}")
         
     index = 0
 
+    # Index selection of listed torrents
     while True:
         try:
             index = int(input("select file to download (index number)"))
@@ -163,6 +172,7 @@ def get_latest():
         except ValueError:
             print("Invalid input. please enter a number")
 
+    # Opens magnet link from chosen episode
     webbrowser.open(latest_episodes_df.iloc[index, 6])
 
 
@@ -171,12 +181,14 @@ def get_ep_seas(y, x):
     s = y
     e = x
 
+    # Create a new dataframe from selected season, episode
     chosen_season_df = df[df["Season"] == s]
     chosen_episode_df = chosen_season_df[chosen_season_df["Episode"] == e]
     chosen_episode_df = chosen_episode_df.reset_index(drop=True)
 
     noOfRows = len(chosen_episode_df)
 
+    # if the dataframe is empty, no torrents with that episode was found
     if (noOfRows != 0):
 
         for i in range(noOfRows):
@@ -184,6 +196,7 @@ def get_ep_seas(y, x):
         
         index = 0
 
+        # Index selection of listed torrents
         while True:
             try:
                 index = int(input("select file to download (index number): "))
@@ -194,19 +207,23 @@ def get_ep_seas(y, x):
             except ValueError:
                 print("Invalid input. please enter a number or CTRL+C to exit ")
 
+        # Opens magnet link from chosen episode
         webbrowser.open(chosen_episode_df.iloc[index, 6])
     
     else:
         print("Unable to find requested episode")
         return
 
+# Lists all episodes found
 def listAll():
     print("Available Episodes")
+    # Remove duplicate season, episode listings from the dataframe
     df_cleaned = df.drop_duplicates(subset=["Season","Episode"], keep="first")
     df_final = df_cleaned[["Season","Episode"]].copy()
     df_final.sort_values(by=["Season", "Episode"], ascending=[False, False], inplace=True)
     print(df_final)
 
+# Calls methods based on user input
 def download():
     user_input = ""
 
@@ -218,6 +235,7 @@ def download():
                 get_latest()
             elif "list" in user_input.lower():
                 listAll()
+            # Check if input is in the format [1:99],[1:99]
             elif re.match(r"^(?:[1-9]\d?|99),(?:[1-9]\d?|99)$", user_input):
                 season, episode = user_input.split(",")
                 get_ep_seas(int(season), int(episode))
