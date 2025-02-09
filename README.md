@@ -1,7 +1,8 @@
 ### TDwnld
 
-| Versions |
-| pip    | 25.0 |
+| Versions |      |
+|-------:|-------:|
+| pip    | 25.0   |
 | python | 3.13.1 |
 
 Install the dependencies
