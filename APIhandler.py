@@ -1,5 +1,5 @@
 import requests
-
+import math
 
 # Retrieve IMDB ID to use for torrent search
 def getIMDBID(search, key):
