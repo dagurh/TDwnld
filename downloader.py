@@ -1,145 +1,38 @@
-import requests
-import pandas as pd
-from datetime import datetime, timezone
 import webbrowser
-import math
 import re
-
-# Converts size to a more readable format
-def convert_size(bytes):
-    bytes = int(bytes)
-    if bytes > 1*10**9:
-        num = bytes/(1024**3)
-        return f"{round(num,2)} GB"
-    else:
-        num = bytes*0.00000095367432
-        return f"{round(num,2)} MB"
+from APIhandler import getIMDBID, getMovieTorrents, getTVShowTorrents
+from dataHandler import populateDataFrame
 
 # Initialize response_json
 response_json = None
+df = None
 
-# Retrieve IMDB ID to use for torrent search
-def getIMDBID(search, key):
-    try:
-        response = requests.get(
-            "http://www.omdbapi.com",
-            headers={"Accept": "application/json"},
-            params={"t": search, "apikey": key}
-        )
-        
-        # Check if the request was successful
-        response.raise_for_status()
-        
-        # Parse JSON response
-        data = response.json()
-        
-        # Handle API-specific errors (e.g., serie/movie not found, invalid API key)
-        if "imdbID" in data:
-            return data["imdbID"]
-        elif "Error" in data:
-            raise ValueError(f"OMDB API Error: Serie/{data['Error']}. Check spelling")
-        else:
-            raise ValueError("Unexpected API response structure")
-    
-    except requests.exceptions.RequestException as e:
-        print(f"Network error: {e}")
-        return None
-    except ValueError as ve:
-        print(f"Data error: {ve}")
-        return None    
-
-# Retrieve all torrents with selected title
-def getTorrents(imdb):
-    try:
-        response = requests.get(
-            "https://EZTVx.to/api/get-torrents",
-            headers={"Accept": "application/json"},
-            params={"page": 1, "limit": 100, "imdb_id": imdb}
-        )
-
-        # Check if the request was successful
-        response.raise_for_status()
-
-        # Parse JSON response
-        data = response.json()
-
-        # Handle API-specific errors (e.g., serie not found, invalid API key)
-        if data["torrents_count"] != 0:
-            totalTorrents = data["torrents_count"]
-            totalPages = math.ceil(totalTorrents / 100)
-            print(f"Total torrents found: {totalTorrents}")
-
-            # If the response has over 100 torrents we iterate 
-            # through pages to retrieve all available torrents
-            if (totalPages > 1):
-                i = 2
-                while i <= totalPages:
-                    responseAdditional_json = requests.get("https://EZTVx.to/api/get-torrents",
-                                        headers={"Accept": "application/json"},
-                                        params={"page": i, 
-                                                "limit": 100, 
-                                                "imdb_id": imdb}).json()
-                    data["torrents"] = data["torrents"] + responseAdditional_json["torrents"]
-                    i += 1
-            return data
-        
-        elif "Error" in data:
-            raise ValueError(f"EZTV API Error: {data['Error']}.")
-        
-        else:
-            print("No torrents found")
-            return None
-    
-    except requests.exceptions.RequestException as e:
-        print(f"Network error: {e}")
-        return None
-    except ValueError as ve:
-        print(f"Data error: {ve}")
-        return None 
-        
-# While response_json is empty we keep asking for serie title
+# While response_json is empty we keep asking for serie/movie title
 while response_json == None:
 
-    search = input("What show should I check? ")
+    movieOrShow = input("Movie or Show? (M/S): ")
+    titleSearch = input("Search Title: ")
 
     with open("API_key.txt") as file:
         key = file.read()
 
-    imdb_full = getIMDBID(search, key)
+
+    imdb_full = getIMDBID(titleSearch, key)
+
+    imdb = None
 
     if imdb_full != None:
         imdb = imdb_full[2:]
         print(f"IMDB-ID: {imdb}")
 
-        response_json = getTorrents(imdb)
-
-
-size = len(response_json["torrents"])
-
-titles = []
-seasons = []
-episodes = []
-dates = []
-magnets = []
-sizes = []
-
-numbers = [i for i in range(1, size+1)]
-
-# Populate the arrays from response_json
-for item in response_json["torrents"]:
-    titles.append(item["title"])
-    seasons.append(int(item["season"]))
-    episodes.append(int(item["episode"]))
-    dates.append(datetime.fromtimestamp(
-        item["date_released_unix"], timezone.utc).strftime('%H:%M  %d/%m/%Y'))
-    sizes.append(convert_size(item["size_bytes"]))
-    magnets.append(item["magnet_url"])
-
-d = {"Number": numbers, 'Titles': titles[0:size], 'Season': seasons[0:size],
-     'Episode': episodes[0:size], 'Sizes': sizes[0:size], "Dates": dates[0:size], 'Links': magnets[0:size]}
-
-df = pd.DataFrame(data=d)
-df.set_index("Number")
+    if movieOrShow.lower() == "m":
+        response_json = getMovieTorrents(imdb)
+        df = populateDataFrame(response_json, "movie")
+    elif movieOrShow.lower() == "s":
+        response_json = getTVShowTorrents(imdb)
+        df = populateDataFrame(response_json, "tvshow")
+    else:
+        print("Input error: select 'm' for Movie and 's' for TV show")
 
 def get_latest():
 
@@ -223,8 +116,25 @@ def listAll():
     df_final.sort_values(by=["Season", "Episode"], ascending=[False, False], inplace=True)
     print(df_final)
 
-# Calls methods based on user input
+def getMovies():
+
+    print(df.movie_name)
+    for row in df.itertuples(index=True):
+        print(f"Index: {row.Index}, Size: {row.Size}, Quality: {row.Quality}, Seeds: {row.Seeds}")
+
+    index = input("Select torrent to download by index number: ")
+
 def download():
+    
+    if df.title == "movie":
+        getMovies()
+
+
+def generateMagnetLink():
+    print("generate")
+
+# Calls methods based on user input
+def downloadTVShow():
     user_input = ""
 
     while "stop" not in user_input:
