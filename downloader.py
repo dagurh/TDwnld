@@ -124,14 +124,15 @@ def getMovies():
 
     index = input("Select torrent to download by index number: ")
 
+def generateMagnetLink(hash, quality):
+
+    return f"magnet:?xt=urn:btih:{hash}&dn={df.movie_name}+{quality}&tr=http://track.one:1234/announce&tr=udp://track.two:80"
+
+
 def download():
     
     if df.title == "movie":
         getMovies()
-
-
-def generateMagnetLink():
-    print("generate")
 
 # Calls methods based on user input
 def downloadTVShow():
