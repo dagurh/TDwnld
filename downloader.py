@@ -122,11 +122,34 @@ def getMovies():
     for row in df.itertuples(index=True):
         print(f"Index: {row.Index}, Size: {row.Size}, Quality: {row.Quality}, Seeds: {row.Seeds}")
 
-    index = input("Select torrent to download by index number: ")
+    index = int(input("Select torrent to download by index number: "))
+
+    print(df)
+
+    print(df.iloc[index, 0])
+    print(df.iloc[index, 1])
+
+    magnet = generateMagnetLink(df.iloc[index,1], df.iloc[index,2])
+
+    webbrowser.open(magnet)
+
 
 def generateMagnetLink(hash, quality):
 
-    return f"magnet:?xt=urn:btih:{hash}&dn={df.movie_name}+{quality}&tr=http://track.one:1234/announce&tr=udp://track.two:80"
+    trackers = [
+        "udp://glotorrents.pw:6969/announce",
+        "udp://tracker.opentrackr.org:1337/announce",
+        "udp://torrent.gresille.org:80/announce",
+        "udp://tracker.openbittorrent.com:80",
+        "udp://tracker.coppersurfer.tk:6969",
+        "udp://tracker.leechers-paradise.org:6969",
+        "udp://p4p.arenabg.ch:1337",
+        "udp://tracker.internetwarriors.net:1337"
+    ]
+
+    trackerString = "&tr=" + "&tr=".join(trackers)
+
+    return f"magnet:?xt=urn:btih:{hash}&dn={df.movie_name}+{quality}&tr=http://track.one:1234/announce&tr=udp://track.two:80{trackerString}"
 
 
 def download():
