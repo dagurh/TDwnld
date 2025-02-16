@@ -151,6 +151,10 @@ def download():
     
     if df.title == "movie":
         getMovies()
+    elif df.title == "tvshow":
+        downloadTVShow()
+    else:
+        print("Error finding movie or tvshow")
 
 # Calls methods based on user input
 def downloadTVShow():
