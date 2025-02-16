@@ -124,11 +124,6 @@ def getMovies():
 
     index = int(input("Select torrent to download by index number: "))
 
-    print(df)
-
-    print(df.iloc[index, 0])
-    print(df.iloc[index, 1])
-
     magnet = generateMagnetLink(df.iloc[index,1], df.iloc[index,2])
 
     webbrowser.open(magnet)
